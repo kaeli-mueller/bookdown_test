@@ -1,0 +1,7 @@
+"0","#this runs the chunk but doesn't show the weird message every time you load it"
+"0","library(palmerpenguins)"
+"2","package ‘palmerpenguins’ was built under R version 4.0.4"
+"0","library(tidyverse)"
+"2","package ‘tibble’ was built under R version 4.0.4"
+"2","package ‘tidyr’ was built under R version 4.0.4"
+"2","package ‘dplyr’ was built under R version 4.0.4"

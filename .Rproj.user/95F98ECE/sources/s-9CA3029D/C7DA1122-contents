@@ -1,0 +1,87 @@
+---
+title: "A Penguin Project"
+author: "Simona Picardi"
+date: "2/25/2021"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Palmer Penguins
+
+Today we are going to work with the **Palmer Penguins** dataset from the `palmerpenguins` 
+package. Install the package as follows:
+
+```{r install, eval = FALSE, echo = TRUE}
+install.packages("palmerpenguins") # add a comment
+```
+
+```{r comment, echo = FALSE}
+# put my comment here
+```
+
+We are writing this in R Markdown because you can do all sorts of things in 
+R Markdown, such as embedding code in text: 2 + 2 = `r 2+2`
+
+```{r load, echo = TRUE, message = FALSE}
+library(palmerpenguins)
+library(tidyverse)
+```
+
+## The dataset
+
+Let's take a look at the datasets available in the `palmerpenguins` package:
+
+```{r data, eval = FALSE, echo = FALSE}
+data(package = "palmerpenguins")
+```
+
+```{r penguins, eval = TRUE, echo = TRUE}
+head(penguins)
+```
+
+> "Capturing and measuring penguins was a lot of fun!" (Anonymous technician)
+
+### Penguin measurements
+
+The table `penguins` includes the following measurements:
+
+1. Bill length;
+1. Bill depth;
+1. Flipper length;
+1. Body mass.
+
+#### Relationship between flipper length and bill length by species
+
+We are going to make a plot showing how flipper length and bill length vary in
+different species of penguin:
+
+```{r plot, echo = FALSE, warning = FALSE, fig.align = "center"}
+
+ggplot(penguins, aes(x = flipper_length_mm, y = bill_length_mm, color = species)) +
+  geom_point() +
+  theme_minimal() + 
+  labs(x = "Flipper length (mm)", y = "Bill length (mm)", color = "Species")
+
+```
+
+For more information about the `palmerpenguins` package, visit [their website](https://allisonhorst.github.io/palmerpenguins/).
+
+```{r logo, echo = FALSE, fig.align = "center", fig.cap = "Logo of the palmerpenguins R package", out.width = '30%'}
+knitr::include_graphics("img/logo.png")
+```
+
+This is a paragraph. 
+  
+This is a new paragraph. 

@@ -1,0 +1,25 @@
+"0","#Eval = False means that it does not get run every time the document is knitted
+#echo = TRUE  means it shows up but that it is not evaluated
+install.packages(""palmerpenguins"") # add a comment
+"
+"2","Installing package into ‘C:/Users/Kaeli/Documents/R/win-library/4.0’
+(as ‘lib’ is unspecified)
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/palmerpenguins_0.1.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3002890 bytes (2.9 MB)
+"
+"2","downloaded 2.9 MB
+
+"
+"1","package â€˜palmerpenguinsâ€™ successfully unpacked and MD5 sums checked
+"
+"1","
+"
+"1",""
+"1","The downloaded binary packages are in
+	C:\Users\Kaeli\AppData\Local\Temp\RtmpolznAd\downloaded_packages"
+"1",""
+"1","
+"

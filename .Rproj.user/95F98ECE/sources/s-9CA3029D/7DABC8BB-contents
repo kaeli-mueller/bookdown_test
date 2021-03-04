@@ -1,0 +1,80 @@
+#RSQLite
+
+#install packages ####
+install.packages("RSQLite")
+install.packages("DBI")
+
+#load packages ####
+library(DBI)
+
+#establish database connection ####
+dragons_db <- dbConnect(drv = RSQLite::SQLite(), 
+                        "..//dragons_test_repo//dragons_test_repo//dragon_copy.db")
+
+class(dragons_db)
+
+#How to run a query through RSQLite ####
+#Retrieve data from the database ####
+dbGetQuery(conn = dragons_db, statement = "SELECT * FROM dragons LIMIT 10;")
+
+# Use dbGetQuery whenever you are getting data from a database
+# Use dbExecute whenever you are changing the structure of the dataframe
+
+#retrieved data and saved it as an R dataframe
+dragons <- dbGetQuery(conn = dragons_db, statement = "SELECT * FROM dragons;")
+#You can spell out the arguments and specify which is conn and which is statement
+#if you don't specify this then R will assume the first is conn and the second is statement
+dragons
+class(dragons)
+
+#Alter database structure ####
+#delete table
+dbExecute(dragons_db, "DROP TABLE dragons;")
+
+#recreate table
+dbExecute(dragons_db, "CREATE TABLE dragons (
+          dragon_id varchar(5) NOT NULL, 
+          sex char(1) CHECK (sex IN ('M', 'F')),
+          age_class varchar(8) CHECK (age_class IN ('Juvenile', 'Subadult', 'Adult')),
+          species varchar(50),
+          PRIMARY KEY (dragon_id)
+);")
+
+#advantages to creating database in R
+#import data into database from R
+dragons <- read.csv("..//dragons_spreadsheets//dragons.csv")
+head(dragons)
+
+#double check if the names match
+names(dragons)[1] <- "dragon_id"
+names(dragons)
+
+#Send to database and import into dragons table
+dbWriteTable(dragons_db, "dragons", dragons, append = TRUE)
+#use append if you just want to add to the table
+
+#check that it worked
+dbGetQuery(conn = dragons_db, statement = "SELECT * FROM dragons LIMIT 10;")
+
+#Trigger functions ####
+# embed things that are automated so you don't have to do them manually ####
+#Add a function that adds a timestamp anytime a tag info updates ####
+dbExecute(dragons_db, "ALTER TABLE dragons ADD COLUMN update_timestamp varchar;")
+
+#first define when the timestamp is added, then define what will be added
+dbExecute(dragons_db, "CREATE TRIGGER add_update_timestamp
+          AFTER INSERT 
+          ON dragons
+          FOR EACH ROW
+          BEGIN
+          UPDATE dragons
+          SET update_timestamp = datetime('now')
+          WHERE dragon_id = new.dragon_id;
+          END;")
+#test it
+dbExecute(dragons_db, "INSERT INTO dragons (dragon_id, sex, age_class, species)
+            VALUES ('D999', 'F', 'Adult', 'Norwegian Ridgeback');")
+
+test <- dbGetQuery(dragons_db, "SELECT * FROM dragons;")
+View(test)
+#The last row got added with a timestamp

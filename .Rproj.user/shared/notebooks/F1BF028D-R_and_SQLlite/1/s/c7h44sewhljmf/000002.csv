@@ -1,0 +1,6 @@
+"0","#install packages"
+"0","#install.packages(""RSQLite"")"
+"0","#prepare libraries"
+"0","library(DBI)"
+"0","library(RSQLite)"
+"0",""

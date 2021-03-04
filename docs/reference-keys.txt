@@ -1,0 +1,10 @@
+fig:logo
+fig:plot
+introduction
+penguins
+palmer-penguins
+subtitle
+subheading
+the-dataset
+penguin-measurements
+relationship-between-flipper-length-and-bill-length-by-species

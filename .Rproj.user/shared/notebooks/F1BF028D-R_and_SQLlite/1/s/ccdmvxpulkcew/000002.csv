@@ -1,0 +1,4 @@
+"0","HANPP_db <- dbConnect(drv = RSQLite::SQLite(),                   "
+"0","                      ""C:/Users/Kaeli/Documents/Computational_Methods/HANPP_database.db"")"
+"2","Couldn't set synchronous mode: file is not a database
+Use `synchronous` = NULL to turn off this warning."

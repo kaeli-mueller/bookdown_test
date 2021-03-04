@@ -1,0 +1,5 @@
+"0","crops_raster <- projectRaster(CROPS_DSM, 
+                              crs = crs(CROPS_DSM),
+                              res = res(CROPS_DSM))
+"
+"2","input and ouput crs are the same"

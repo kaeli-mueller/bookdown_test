@@ -1,0 +1,384 @@
+---
+title: "Exercise_6"
+author: "Kaeli Mueller"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#install packages
+```{r}
+#install.packages("tmap")
+#install.packages("mapview")
+#install.packages("leaflet")
+#install.packages("sp")
+
+library(tmap)
+library(mapview)
+library(leaflet)
+library(sp)
+library(sf)
+library(tidyverse)
+```
+
+##Exercise 6.1
+
+This week we are going to work with data describing occurances of Scleractinian corals in Australia’s marine protected areas. We’ll work with a txt file of coral occurances (coral_occurance.txt), a shapfile of Australia (aus.shp), and shapefile of marine protected areas in Australia (CAPAD2018_marine.shp). Our end goal will be to make a map showing protected areas and corals in the Great Barrier Reef.
+
+Let’s start by loading the data.
+
+#Load the data
+```{r}
+coral <- read.table("D://Geospatial_Analysis//coral_occurrence.txt", header=T, sep = "\t") #we use sep = "\t" because this is a tab seperated file
+
+coral <- coral %>% drop_na(decimalLatitude) #remove rows with incomplete coordinate data
+
+coral_sf <- st_as_sf(coral,coords=c("decimalLongitude","decimalLatitude"), crs=4326) #convert to a spatial point data.frame
+
+setwd("D://Geospatial_Analysis")
+
+getwd()
+
+marine_prot_area <- st_read("D:/Geospatial_Analysis/CAPAD2018_marine/CAPAD2018_marine.shp") #read in the shape file of marine protected areas
+
+aus <- st_read("D:/Geospatial_Analysis/aus/aus/aus.shp") #read in the shape file of australia
+```
+
+Before we begin, We are going to transform these datasets into a lat/long coordinate system (WGS84). This will help us add them to interactive maps later in the tutorial:
+
+```{r}
+coral_sf <- st_transform(coral_sf, 4269)
+marine_prot_area <- st_transform(marine_prot_area, 4269)
+aus <- st_transform(aus, 4269)
+```
+
+Now lets use the plot function in base R to quickly visualize all three datasets in a single plot. Using add=T tells r to layer features in one plot.
+```{r}
+plot(st_geometry(aus))
+plot(st_geometry(marine_prot_area), add = T, col = "blue")
+plot(st_geometry(coral_sf), add = T, col = "pink")
+```
+You can actually get fairly far with the base R plot() function. But the code gets dense quite quickly and the visualizations are nothing like what tmap and ggplot can produce (see below). I recommend using plot() only to quickly visualize your data. Data visualizations you intend to publish or share should be made with one of the packages described below. If you’re interested in learning more about using plot(), go here.
+
+4. ggplot2
+As we saw last week, you can do quite a bit of mapping with our friend ggplot2 using geom_sf(). This section will focus on further customizing maps in ggplot2.
+
+Title, subtitle, and axis labels
+A title and a subtitle can be added to the map using the function ggtitle. Axis names are absent by default on a map, but can be changed to something more suitable (e.g. “Longitude” and “Latitude”). Lets plot the marine protected areas.
+```{r}
+ggplot() +
+    geom_sf(data = marine_prot_area) +
+    geom_sf(data=aus) + #Remember you can layer geometries using multiple calls to geom_sf() 
+    xlab("Longitude") + 
+    ylab("Latitude") +
+    ggtitle("Marine Protected Areas in Australia")
+```
+Color
+In many ways, sf geometries are no different than regular geometries, and can be displayed with the same level of control on their attributes. For instance it is really easy to change the border and fill colors of polygons.
+```{r}
+ggplot() +
+    geom_sf(data = marine_prot_area, color = "black", fill = "lightblue") +
+    geom_sf(data=aus, color = "white", fill = "lightgrey")
+```
+Rember that ggplot2 allows the use of more complex color schemes, such as a gradient on one variable of the data. Here is an example that shows the IUCN code of the marine protected areas. In this example, we use the “viridis” colorblind-friendly palette for the color gradient (with option = “plasma” for the plasma variant).
+```{r}
+ggplot() +
+  geom_sf(data = marine_prot_area, color = "black", aes(fill = IUCN)) +
+  geom_sf(data=aus, color = "white", fill = "lightgrey") +
+  labs(title = "Marine Protected Areas in Australia",
+       fill = "IUCN Code")
+
+#we know from the meta data provided with the marine protected area shape file that each IUCN code corresponds to a protected area type: 
+
+#IA: Strict Nature Reserve
+#II: National Park
+#III: Natural Monument or Feature
+#IV: Habitat/Species Management Area
+#V: Protected Landscape/Seascape
+#VI: Protected area with sustainable use of natural resources VI
+
+#lets make the legend more meaningful
+
+ggplot() +
+  geom_sf(data = marine_prot_area, color = "black", aes(fill = IUCN)) +
+  scale_fill_discrete(name = "IUCN Code", labels = c("Strict Nature Reserve", 
+                                                     "National Park", 
+                                                     "Natural Monument or Feature",
+                                                     "Habitat/Species Management Area",
+                                                     "Protected Landscape/Seascape",
+                                                     "Protected area with sustainable use of natural resources")) +
+  geom_sf(data=aus, color = "white", fill = "lightgrey") +
+  labs(title = "Marine Protected Areas in Australia")
+```
+Projection and extent
+The function coord_sf() allows you to set the projection and map extent on the fly. By default, ggplot will use the coordinate system of the first projected layer, if no layer is projected the default is WGS84. Let’s reproject our map to the Geoscience Australia Lambert projecttion, GDA94.
+```{r}
+ggplot() +
+  geom_sf(data=aus, color = "black", fill = "lightgrey") +
+  coord_sf(crs = st_crs(3112))
+```
+
+The extent of the map can also be set in coord_sf by setting limits on the x-axis (xlim), and on the y-axis (ylim). Note that the limits are automatically expanded by a fraction to ensure that the data and axes don’t overlap; this can be turned off by using the argument expand = FALSE. Let’s zoom in the coast of Queensland where the Great Barrier Reef is located:
+```{r}
+ggplot() +
+  geom_sf(data=aus, color = "black", fill = "lightgrey") +
+  coord_sf(xlim = c(141.46, 158), ylim = c(-25,-10), expand = FALSE)
+
+```
+
+When deciding on your bounding box. Remember that latitutde is on the y axis and longitude is on the x axis. If you ever get confused about this, just think of a globe - the Equator runs horizontally, higher latitudes are higher on the y-axis. Conversely, changes in longitude reflect changes along the x-axis.
+
+Now lets add the Great Barrier Reef Protected Areas to our map.
+```{r}
+GBR <- marine_prot_area %>% filter(NAME == "Great Barrier Reef")
+
+ggplot() +
+  geom_sf(data=aus, color = "black", fill = "lightgrey") +
+  geom_sf(data = GBR, color = "black", aes(fill = IUCN)) +
+  coord_sf(xlim = c(141.46, 158), ylim = c(-25,-10), expand = FALSE) +
+  scale_fill_discrete(name = "IUCN Code", labels = c("Strict Nature Reserve", 
+                                                     "National Park", 
+                                                     "Habitat/Species Management Area",
+                                                     "Protected area with sustainable use of natural resources")) +
+  labs(title = "Great Barrier Reef Protected Areas")
+```
+
+Scale bar and North arrow
+Several packages are available to create a scale bar and north arrow on a map (e.g. prettymapr, vcd, ggsn, or legendMap). We’ll use the ggspatial. Arguments in the annotation_scale and annotation_north_arrow functions let us customize these map elements.
+
+location sets were the north arrow or scale bar will be plotted. “tr” = top right. “bl” = bottom left.
+You can control to size of the scale bar and north arrow using width_hint, height, and width.
+the style arguments control how the north arrow will be displayed.
+Note that all distance arguments in the north arrow and scale functions are set to “km” by default; they can also be set to nautical miles with “nm”, or miles with “mi”.
+```{r}
+#install.packages("ggspatial")
+library("ggspatial")
+
+ggplot() +
+  geom_sf(data=aus, color = "black", fill = "lightgrey") +
+  geom_sf(data = GBR, color = "black", aes(fill = IUCN)) +
+  coord_sf(crs = st_crs(3112)) + #project the data so that km measurements in the scale bar make sense
+  annotation_scale(location = "tr", width_hint = 0.25) +
+  annotation_north_arrow(location = "bl", which_north = "true",
+        pad_x = unit(0.05, "in"), pad_y = unit(0.05, "in"),
+        height = unit(0.4, "in"), width = unit(0.25, "in"),
+        style = north_arrow_fancy_orienteering) +
+  coord_sf(xlim = c(141.46, 158), ylim = c(-25,-10), expand = FALSE) +
+  scale_fill_discrete(name = "IUCN Code", labels = c("Strict Nature Reserve", 
+                                                     "National Park", 
+                                                     "Habitat/Species Management Area",
+                                                     "Protected area with sustainable use of natural resources")) +
+  labs(title = "Great Barrier Reef Protected Areas")
+```
+Text
+You can further coustomize your map in ggplot by adding text lables. We will add text to the map manually using the anotate function but you can also the geom_text function to add a list of text lables at specific points, for instance if you need to lable countries or states.
+```{r}
+ggplot() +
+  geom_sf(data=aus, color = "black", fill = "lightgrey") +
+  geom_sf(data = GBR, color = "black", aes(fill = IUCN)) +
+  coord_sf(crs = st_crs(3112)) + #project the data so that km measurements in the scale bar make sense
+  annotation_scale(location = "tr", width_hint = 0.25) + #bl = bottom left
+  annotation_north_arrow(location = "bl", which_north = "true", #tr = top right
+        pad_x = unit(0.05, "in"), pad_y = unit(0.05, "in"),
+        height = unit(0.4, "in"), width = unit(0.25, "in"),
+        style = north_arrow_fancy_orienteering) +
+  annotate(geom = "text", x = 150, y = -16, label = "Great\nBarrier Reef", 
+    fontface = "italic", color = "grey22", size = 3) +
+  annotate(geom = "text", x = 144, y = -20, label = "Queensland", 
+    size = 2.5) +
+  coord_sf(xlim = c(141.46, 158), ylim = c(-25,-10), expand = FALSE) +
+  scale_fill_discrete(name = "IUCN Code", labels = c("Strict Nature Reserve", 
+                                                     "National Park", 
+                                                     "Habitat/Species Management Area",
+                                                     "Protected area with sustainable use of natural resources")) +
+  labs(title = "Great Barrier Reef Protected Areas")
+```
+Final map
+Now to make the final touches!
+```{r}
+ggplot() +
+    #plot map of austalia
+    geom_sf(data=aus, color = "black", fill = "antiquewhite") +
+    #plot protected are polygons
+    geom_sf(data = GBR, color = "black", aes(fill = IUCN)) +
+    #project the data so that km measurements in the scale bar make sense
+    coord_sf(crs = st_crs(3112)) + 
+    #Zoom in to the coast of Queensland where the Great Barrier Reef is located
+    coord_sf(xlim = c(141.46, 158), ylim = c(-25,-10), expand = FALSE) +
+    #add a scale bar on the top right of the map
+    annotation_scale(location = "tr", width_hint = 0.25) +
+    #add a north arrow on the bottom left of the map
+    annotation_north_arrow(location = "bl", which_north = "true", #tr = top right
+          pad_x = unit(0.05, "in"), pad_y = unit(0.05, "in"),
+          height = unit(0.4, "in"), width = unit(0.25, "in"),
+          style = north_arrow_fancy_orienteering) +
+   #lable the Great Barrier Reef 
+   annotate(geom = "text", x = 150, y = -16, label = "Great\nBarrier Reef", 
+      fontface = "italic", color = "grey22", size = 3) +
+   #lable Queensland
+   annotate(geom = "text", x = 144, y = -20, label = "Queensland", 
+      size = 2.5) +
+   #specify the map legend lables and color palette
+   scale_fill_brewer(name = "IUCN Code", palette = "Set2", labels = c("Strict Nature Reserve", 
+                                                       "National Park", 
+                                                       "Habitat/Species Management Area",
+                                                       "Protected area with sustainable\nuse of natural resources")) +
+   #seperate the legend entried into two columns  
+   guides(fill = guide_legend(ncol = 2, title.position = "top")) +
+   #place the legend on the bottom of the map and set the legend text size
+   theme(legend.position = "bottom", legend.text = element_text(size = 7), legend.title = element_text(size = 8)) +
+   #set the map background color to alice blue, and create a dashed grid, remove lat/lon from axes 
+   theme(panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5), 
+          panel.background = element_rect(fill = "aliceblue"), axis.text.x=element_blank(), 
+          axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+   #add a map title 
+   labs(title = "Great Barrier Reef Protected Areas")
+```
+If you look at this code all at once, it may seem overwhelming, but the big advantage of ggplot is that it’s modular. You can - and should - add pieces to your visualization one step at a time. If you think you’ll be mapping a lot with ggplot, this tutorial walks you through the whole process with different data.
+
+Finally, we can save our map using ggsave. This function allows a graphic (typically the last plot displayed) to be saved in a variety of formats, including the most common PNG (raster bitmap) and PDF (vector graphics). You also have control over the size and resolution of the output image. The code below shows you how to save our map as a PDF or PNG:
+```{r}
+#ggsave("GBR.pdf") uncomment to save our map as a pdf
+#ggsave("GBR.png", width = 10, height = 10, dpi = "screen") #uncomment to save our map as a png
+```
+
+
+##Exercise 6.2
+
+```{r}
+library(tmap)
+tmap_mode("plot") # set to "view" for interactive visualizations, see below
+qtm(marine_prot_area)
+```
+Let’s use the st_intersection function from sf to count the Scleractinia coral occurances in marine protected areas. This will provide us with data that we can use to create a choropleth map of coral occurance counts.
+```{r}
+marine_prot_area$coral_count <- lengths(st_intersects(marine_prot_area, coral_sf))
+#Now we can use qtm() to build fast choropleth maps!
+qtm(marine_prot_area, fill = "coral_count", fill.title = "Scleractinia coral count")
+```
+
+Notice how without specification, qtm() creates a legend! As you bang your head against your desk expressing frustration over ggplot, ultimately, you’ll probably just use this tmap, remember that knowledge is POWER! I wanted to introduce you to the MANY tools out there, you never know when you might get stuck and need one of them.
+
+Also notice that the majority of Scleractinia coral observations occure in the Great Barrier Reef!
+
+qtm() has a number of cool arguments:
+
+text allows you to specify text to go over each polygon/attribute in your shapefile (i.e. state names, abbreviations, whatever) text.size controls text size.
+format - the package comes with a few pre-defined map formats that are worth checking out. There are also a few predefined
+style options included.
+fill.title titles the legend
+text.root determines how text size is increased
+fill.textNA allows you to specify the name of attributes with value NA
+In addition to this awesome tool, tmap has a number of other tools for specific spatial data types. I recommend you review this vignette if you plan on plotting with tmap.
+
+You can think of tmap elements as simmilar to the geom elements you add to a ggplot. Like ggplot, you can use tmap to add complexity and layers to a map. We start with tm_shape(), which specifies the shape object. Then we can add additional information. Here’s an example:
+```{r}
+tm_shape(marine_prot_area) +
+  tm_fill()
+```
+
+Very informative map. Basically here I tell tmap that we are working with the marine protected areas shapefile (tm_shape(marine_prot_area)) and I just want to fill in the whole thing in the default color, a bleak shade of gray. We can do better than this:
+```{r}
+tm_shape(marine_prot_area) +
+  tm_fill(col = "coral_count", title = "Scleractinia coral count") +
+  tm_compass() +
+  tm_scale_bar()
+```
+Remember all those hoops we had to jump through to specify choropleth map breaks in ggplot? We can add more information to tm_fill() to specify exactly how we want to fill polygons. Here’s one example using the jenks algorithm to create natural breaks (groups based on gaps in the data):
+```{r}
+tm_shape(marine_prot_area) +
+  tm_fill(col = "coral_count", style = "jenks", title = "Scleractinia coral count") +
+  tm_compass() +
+  tm_scale_bar()
+```
+
+You know what to do to get more info about fill options (?tm_fill). Notice how the style we chose significantly changes our visualization (i.e. maps can lie). Here, I’ve used jenks, which minimizes each class’s average deviation from the class mean.
+
+We can add protected area borders to the map using tm_borders() and specify the darkness of borders using alpha:
+```{r}
+tm_shape(marine_prot_area) +
+  tm_fill(col = "coral_count", style = "jenks", title = "Scleractinia coral count") +
+  tm_borders(alpha = 0.3) +
+  tm_compass() +
+  tm_scale_bar()
+```
+
+Each tm_shape() and it’s specifications are referred to as a group. We can stack multiple groups (i.e. specific visualization of tm_shape(marine_prot_area) and tm_shape(aus). Like ggplot, each shapefile you intend to plot can have different projections and extents, tmap will automatically reproject stacked groups of data to the projection of the first group!
+```{r}
+tm_shape(marine_prot_area) +
+  tm_fill(col = "coral_count", style = "jenks", title = "Scleractinia coral count") +
+  tm_borders(alpha = 0.3) +
+  tm_compass() +
+  tm_scale_bar() +
+  tm_shape(aus) +
+  tm_borders(alpha = 0.5)
+```
+
+You can alter the format, shape, and legend, among other things, but digging a bit more into the tmap elements and code. I strongly recommend you review the tmap vignette and the full package documentation that explains all of the cool things you can do. I’ll quickly show you how to zoom in on a specific map region and customize the map colors:
+```{r}
+#Plot marine protected areas and zoom in on the Great Barrier Reef  
+tm_shape(marine_prot_area, bbox=tmaptools::bb(xlim=c(141.46, 158), ylim=c(-25, -10))) +
+#Fill marine protected areas by coral counts  
+  tm_fill(col = "coral_count", style = "jenks", title = "Coral Count") +
+#Add a compass and scale bar on the bottom left of the map    
+  tm_compass(type = "8star", position = c("left", "bottom")) +
+  tm_scale_bar(position = c("left", "bottom")) +
+#plot the base map of australia color the polygon and boarders  
+  tm_shape(aus) +
+  tm_fill(col="lightgrey") +
+  tm_borders(alpha = 0.5) +
+#Color the map background light blue, move the map legend to the top right corner, and add a map title
+  tm_layout(bg.color = "lightblue", legend.position = c("right", "top"), main.title = "Scleractinian Corals\nin the Great Barrier Reef", main.title.position = "left", main.title.size = 1)
+```
+
+Want to save this beautiful map we made?
+```{r}
+#first store the map in an object 
+coralMap <- tm_shape(marine_prot_area, bbox=tmaptools::bb(xlim=c(141.46, 158), ylim=c(-25, -10))) +
+    tm_fill(col = "coral_count", style = "jenks", title = "Coral Count") +
+    tm_compass(type = "8star", position = c("left", "bottom")) +
+    tm_scale_bar(position = c("left", "bottom")) +
+    tm_shape(aus) +
+    tm_fill(col="lightgrey") +
+    tm_borders(alpha = 0.5) +
+    tm_layout(bg.color = "lightblue", legend.position = c("right", "top"), main.title = "Scleractinian Corals\nin the Great   
+    Barrier Reef", main.title.position = "left", main.title.size = 1)
+
+## save an image ("plot" mode):
+## tmap_save(coralMap, filename = "corals.png")
+
+## save as stand-alone HTML file ("view"/interactive mode):
+## tmap_save(coralMap, filename = "corals.html")
+```
+
+##Exercise 6.3
+6. Interactive maps
+The last amazing, mindbogglingly cool thing we can do with tmap is quickly make interactive visualizations. tmap isn’t the only R package for making interactive maps, we’ll also breifly cover mapview and Leaflet. If you get really into making interactive maps Leaflet and Shiny are the main tools for interactive mapping in R. However, you want to QUICKLY build a cool interactive map, tmap and mapview can help!
+
+The code below uses tmap to produce an interactive map of coral counts but it was very memory hungy when I tried to knit this html. I couldn’t compile the output html on my computer. You can run this code in your R terminal to see the output.
+```{r}
+#tmap_mode("view") #tmap mode set to interactive viewing
+#coralMap2 <- tm_shape(marine_prot_area) +
+#    tm_fill(col = "coral_count", style = "jenks", title = "Coral Count")
+#coralMap2
+```
+The quickest way to create interactive maps in R may be with mapview. The following ‘one liner’ is a reliable way to interactively explore a wide range of geographic data formats:
+```{r}
+library(mapview)
+mapview(coral_sf)
+```
+
+Last but not least is leaflet which is the most mature and widely used interactive mapping package in R. leaflet provides a relatively low-level interface to the Leaflet JavaScript library. In R Leaflet maps are created with the leaflet() function. Like the other mapping packages we’ve worked with, leaflet maps are built by adding multiple map layers. Unlike ggplot and tmap leaflet layers are added using a pipe (%>%) instead of a +.
+
+Let’s use leaflet to make a quick interactive map of coral occurance counts:
+```{r}
+leaflet(coral_sf) %>% 
+  addTiles() %>% 
+  addMarkers(clusterOptions = markerClusterOptions()) %>% 
+  addMiniMap()
+```
+
+

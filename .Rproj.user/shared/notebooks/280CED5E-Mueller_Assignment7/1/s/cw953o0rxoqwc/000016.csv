@@ -1,0 +1,24 @@
+"0","municipalities <- st_read(""C:/Users/Kaeli/Documents/Geospatial_Analysis/Utah_Municipal_Boundaries/Utah_Municipal_Boundaries.shp"")
+"
+"1","Reading layer `"
+"1","Utah_Municipal_Boundaries"
+"1","' from data source `"
+"1","C:\Users\Kaeli\Documents\Geospatial_Analysis\Utah_Municipal_Boundaries\Utah_Municipal_Boundaries.shp"
+"1","' using driver `"
+"1","ESRI Shapefile"
+"1","'"
+"1","
+"
+"1","Simple feature collection with 253 features and 17 fields"
+"1","
+"
+"1","geometry type:  MULTIPOLYGON
+"
+"1","dimension:      XY
+"
+"1","bbox:           "
+"1","xmin: -114.044 ymin: 36.99999 xmax: -109.3116 ymax: 42.00117"
+"1","
+"
+"1","geographic CRS: WGS 84
+"

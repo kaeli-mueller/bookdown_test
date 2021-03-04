@@ -1,0 +1,49 @@
+---
+title: "Spatial_Analysis_Rasters"
+author: "Kaeli Mueller"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Lecture7, March 2
+
+#install packages
+```{r}
+install.packages("raster")
+install.packages("terra")
+install.packages("rgdal")
+install.packages("Rtools")
+install.packages("here")
+
+library(raster)
+library(terra)
+library(sp)
+library(sf)
+library(rgdal)
+library(mapview)
+library(here)
+```
+#read in the files
+```{r}
+CROPS_DSM <- raster("C:/Users/Kaeli/Documents/Geospatial_Analysis/CDL_2016_clip_20210301165537_442576959/CDL_2016_clip_20210301165537_442576959.tif")
+municipalities <- st_read("C:/Users/Kaeli/Documents/Geospatial_Analysis/Utah_Municipal_Boundaries/Utah_Municipal_Boundaries.shp")
+```
+
+#plot the object on a map
+```{r}
+mapview(CROPS_DSM)
+```
+
+#project the object
+```{r}
+crs(CROPS_DSM)
+
+crops_raster <- projectRaster(CROPS_DSM, 
+                              crs = crs(CROPS_DSM),
+                              res = res(CROPS_DSM))
+```
+

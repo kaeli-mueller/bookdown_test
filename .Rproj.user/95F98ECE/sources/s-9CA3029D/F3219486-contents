@@ -1,0 +1,171 @@
+---
+title: 'Assignment 6'
+author: "Kaeli Mueller"
+date: "Feb 25, 2021"
+output: html_document
+---
+
+### Instructions
+
+**For each question below, show code.**  Once you've completed things, don't forget to to upload this document (knitted version please!) to CANVAS. 
+
+A few tips:
+
+* Don't forget to knit your document frequently!
+* Don't forget to `install.packages()` and load them using `library()`.
+* Don't forget to use `?` or `help()` if you're unsure about a function
+* **EXPLAIN WHAT YOUR RESULTS MEAN!**  Think about the numbers and visualizations and explain, in words, what they mean.
+* Make sure you label all axes and legends and add a title to your plots and maps.
+
+**23 points total**
+
+So far we have been working with **thematic maps** in class (eg choropleth maps). These maps show the distribution of a single attribute in space (or relationships among several attributes), and are used for display or analysis. In this assignment we will create **reference maps**, these maps are used to display the location of features, and are often used for navigation. A great example of reference maps (and one that you might already be familiar with) are [US National Park Service (NPS) Maps](https://www.nps.gov/carto/app/#!/parks). 
+
+**In this assignment you will work with data from the [NPS GIS Portal](https://public-nps.opendata.arcgis.com/) to create three reference maps for a national park of your choice. Maps in R are infinitely customizable, the goal of this assignment is for you to explore different map themes and aesthetics to get a feel for map customization. You may use `ggplot2`, `tmap`, or any other R mapping package to create your maps.**
+
+### Set-up (5 points)
+
+**2. Set your working directory below and load all of the packages you will need for creating your maps.**
+
+```{r}
+#setup
+#knitr::opts_knit$set(root.dir = "YOUR WORKING DIRECTORY HERE")
+
+#load packages here
+library(tmap)
+library(mapview)
+library(leaflet)
+library(sp)
+library(sf)
+library(tidyverse)
+library(rgdal)
+library(raster)
+library(rgeos)
+```
+
+2. Now you will need to download and import your data. I have provided you with a shapefile of NPS park boundaries but you will need to download some additional shape files to create your reference maps. You can find all available shapefiles for a park by searching for the park name on the [NPS Data Portal](https://public-nps.opendata.arcgis.com/). For instance the search below will produce all the available files for Canyonlands National Park:
+
+[search for Canyonlands shapefiles](Screenshot_2021-02-15 National Park Service.png)
+
+**You must use 2 additional shapefiles for your maps. One of these shapefiles should be a line feature (eg trails) the other shapefile should be a point feature (eg points of interest).**
+
+**Import all of your shapefiles into `R`, check their projections. Reproject your shapefiles if you need to.**
+
+```{r}
+#Read in the data
+boundary <- st_read("D:/Geospatial_Analysis/NPS_-_Land_Resources_Division_Boundary_and_Tract_Data_Service-shp/NPS_-_Land_Resources_Division_Boundary_and_Tract_Data_Service.shp") #read in the shape file of marine protected areas
+
+roads <- st_read("D:/Geospatial_Analysis/Canyonlands_National_Park_-_Roads_/Roads.shp")
+
+trails <- st_read("D:/Geospatial_Analysis/Canyonlands_National_Park_-_Trails-shp/Trails.shp")
+
+campsites <- st_read("D:/Geospatial_Analysis/Canyonlands_National_Park_-_Campsites_-shp/Campsites.shp")
+
+parking <- st_read("D:/Geospatial_Analysis/Canyonlands_National_Park_-_Parking_-shp/Parking.shp")
+
+point_of_interest <- st_read("D:/Geospatial_Analysis/Canyonlands_National_Park_-_Points_of_Interest_-shp/Points_of_Interest.shp")
+```
+
+### Map 1: Park Reference Map (5 points)
+
+**3. Create a reference map for the full extent of the park. This map must include the park boundary and at least two additional shapefiles from the [NPS Data Portal](https://public-nps.opendata.arcgis.com/). One of these shapefiles should be a line feature (eg trails) the other shape file should be a point feature (eg points of interest). Your map should also include a title, legend, scale bar, and north arrow.** Hint: If you are using tmap, the elements `tm_lines` and `tm_symbols` allow you to add point and line features to your map.
+
+```{r}
+#install.packages("ggspatial")
+library(ggspatial)
+
+#Add data to the coordinate system
+boundary_sf <- st_transform(boundary, 4269)
+
+roads_sf <- st_transform(roads, 4269)
+
+trails_sf <- st_transform(trails, 4269)
+
+campsites_sf <- st_transform(campsites, 4269)
+
+parking_sf <- st_transform(parking, 4269)
+
+point_of_interest_sf <- st_transform(point_of_interest, 4269)
+
+#plot them quickly to visualize them
+plot(st_geometry(boundary_sf))
+plot(st_geometry(roads))
+
+#plot the map
+ggplot() +
+    geom_sf(data = boundary_sf,  color = "tan", aes(fill = "National Park", name = "Legend"), show.legend = "polygon") + 
+    geom_sf(data = roads_sf, color = "black", aes(fill = "Roads", name = "Legend"), show.legend = "point") +  #roads layer (line features)
+    geom_sf(data = parking_sf, color = "blue", aes(fill = "Parking", name = "Legend"), show.legend = "point") + #parking layer (points feature)
+    coord_sf(ylim = c(37.95, 38.53), xlim = c(-110.3, -109.5), expand = TRUE, crs = st_crs(4269)) +   
+    #zoom in closer to your data
+    annotation_north_arrow(location = "bl", which_north = "true",
+        pad_x = unit(3.5, "in"), pad_y = unit(2.5, "in"),
+        height = unit(0.4, "in"), width = unit(0.25, "in"),
+        style = north_arrow_fancy_orienteering) +
+    labs(title = "Canyonlands National Park Roads and Parking") + #add a title
+    annotation_scale(location = "tr", width_hint = 0.25) + #add a scale bar
+    scale_fill_manual(values = c("National Park" = "tan", "Roads" = "black", "Parking" = "blue"),
+                      guide = guide_legend(override.aes = list(linetype = "blank", shape = NA)),
+                      name = "Legend")  
+    
+```
+
+### Map 2: Site Reference Map (5 points)
+
+**4. Create a reference map for a specific site in the park. This could be your favorite trail, a specific camp ground, a point of interest, or any other park location that you want to highlight. Make sure that you choose a bounding box for your map with an extent that fully contains the site that you are highlighting. Your site map should include at least 2 point, line, or polygon features that highlight important site characteristics. For instance if you were creating a map of Old Faithful, you could highlight the geyser location and the trail system surrounding the geyser, you might also show the nearby lodge. Your map should also include text labels highlighting key features (eg Old Faithful), a title, legend, scale bar, and north arrow.**  
+
+```{r}
+ggplot() +
+    geom_sf(data = boundary_sf,  color = "tan", aes(fill = "National Park", name = "Legend"), show.legend = "polygon") + 
+    geom_sf(data = trails_sf, color = "brown", aes(fill = "Trails", name = "Legend"), show.legend = "line") +  #trails layer (line features)
+    geom_sf(data = point_of_interest_sf, color = "red", aes(fill = "Point of Interest", name = "Legend"), show.legend = "point") + #point of interest layer (points feature)
+    coord_sf(ylim = c(37.95, 38.53), xlim = c(-110.3, -109.5), expand = TRUE, crs = st_crs(4269)) +   
+    #zoom in closer to your data
+    annotation_north_arrow(location = "bl", which_north = "true",
+        pad_x = unit(3.5, "in"), pad_y = unit(2.5, "in"),
+        height = unit(0.4, "in"), width = unit(0.25, "in"),
+        style = north_arrow_fancy_orienteering) +
+    labs(title = "Canyonlands National Park") + #add a title
+    annotation_scale(location = "tr", width_hint = 0.25) + #add a scale bar
+    annotate(geom = "text", x = -109.9, y = 38.4, label = "Island in the Sky", 
+      fontface = "italic", color = "Black", size = 4) +
+    scale_fill_manual(values = c("National Park" = "tan", "Trails" = "brown", "Point of Interest" = "red"),
+                      guide = guide_legend(override.aes = list(linetype = "blank", shape = NA)),
+                      name = "Legend") 
+```
+
+### Map 3: Interactive Map (5 points)
+
+**5. Convert your park reference map (Map 1) to an interactive map using `tmap`, `mapview`, or `leaflet`. This map does not need to include a legend compass, scale bar, or title.** 
+
+```{r}
+#leaflet(point_of_interest_sf) %>% 
+#  addTiles() %>% 
+#  addMarkers(clusterOptions = markerClusterOptions()) %>% 
+#  addMiniMap()
+
+#The map works but I didn't knit it to be safe
+```
+
+## 3. Reflection (3 points)
+
+When conducting data analysis, you as a researcher not only have to demonstrate your technical skills but consider your choices and their impacts. Reflecting on data analysis helps you document your process, what worked, what didn't, and how you might improve. At the end of each class assignment you will asked to write a sort reflection. 
+
+For this reflection keep in mind the principles of feminist data visualization 
+
+* Rethink binaries
+* Embrace Pluralism
+* Examine power and aspire to empower
+* Consider context and subjectivity
+* Represent uncertainty
+* Legitimize embodiment and affect
+* Make labor visible
+
+and please respond to the the following prompts:
+
+**1. How did you choose the symbology for your maps?**
+#I chose symbology for my maps based on what I was familiar with maps I have seen before and what I knew how to do in R. For example, I have been to some national parks before and I am familiar with the maps they hand out there. I thought that the tan background would look kind of like those maps. They have an earthy feel, but they are still easy to interpret. I then chose colors for the line and point features that would stand out and be visible. But beyond that, all of the symbology choices I made based on my own knowledge of R programming. It was a hard feeling to be making a map and wanting it to be different and more attractive, but being limited by my very rudimentary skills with R. It was humbling to have to look at existing maps on google earth of the national park I chose because I didn't know how to find specific sites in the park with the data I had. It was a small glimpse into how those with the power to create maps and the software to develop maps can control how other people can map their own world. It shows that even though R is monetarily accessible, it is not always intelectually accessible, as it is very difficult and arduous to learn alone. I now want to be more gracious when I see poorly made maps. I will try to assume that they wanted the map to look amazing but they were restricted by the technology they worked with. 
+
+**3. Have a look at the [NPS map symbol library](https://www.nps.gov/maps/tools/symbol-library/) choose one symbol and describe how you would re-draw or re-lable the symbol. You can answer this question by inserting a photo of a re-drawn symbol.**
+
+Kint your file and submit the html on CANVAS.
